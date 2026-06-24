@@ -5,8 +5,13 @@
 ### 1. Configure BIOS
 - Enable **IOMMU**: Intel VT-d (Virtualization Technology for Directed I/O)
 - Enable **Above 4G Decoding**
-- Disable **CSM** to enforce using UEFI
-- Ryzen systems: if unable to boot Proxmox setup, try rebooting a few times
+- Enable **SR-IOV** (mostly AMD system)
+- Disable **CSM** to enforce using UEFI mode
+   - All storage devices must use the GPT partition scheme
+   - All GPUs must support UEFI
+   - Bad HDMI / DisplayPort cables may result in no display output
+- AMD systems: if Promox installer fails to boot, try restarting the system a few times
+- Intel systems with NVIDIA RTX GPUs: if Promox installer fails to boot, try using older Proxmox 9.1 instead
 
 ### 2. Install Proxmox
 - When selecting the target disk, choose **Options** and set `maxroot` to limit the root partition size.
