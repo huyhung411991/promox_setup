@@ -4,119 +4,122 @@
 
 ### 1. Configure BIOS
 - Enable **IOMMU**: Intel VT-d (Virtualization Technology for Directed I/O)
+  - On Asus X299 mainboard: `Advanced > System Agent (SA) Configuration > Intel@ VT for Directed I/O (VT-d) > Enabled`
 - Enable **Above 4G Decoding**
+  - On Asus X299 mainboard: `Advanced > PCI Subsystem Settings > Above 4G Decoding > Enabled`
 - Enable **SR-IOV** (mostly AMD system)
 - Disable **CSM** to enforce using UEFI mode
-   - All storage devices must use the GPT partition scheme
-   - All GPUs must support UEFI
-   - Bad HDMI / DisplayPort cables may result in no display output
-- AMD systems: if Promox installer fails to boot, try restarting the system a few times
-- Intel systems with NVIDIA RTX GPUs: if Promox installer fails to boot, try using older Proxmox 9.1 instead
+   - Requirements:
+     - All storage devices must use the GPT partition scheme
+     - All GPUs must support UEFI
+     - Bad HDMI / DisplayPort cables may result in no display output
+   - On Asus X299 mainboard: `Boot > CSM > Launch CSM > Disabled`
+   - Temporarily solution in case disabling **CSM** causes black screen (example on Asus X299 mainboard):
+     - `Boot > CSM`
+     - `Launch CSM > Enabled`
+     - `Boot Device Control > UEFI and Legacy OPROM`
+     - `Boot from Network Devices > UEFI driver first`
+     - `Boot from Storage Devices > UEFI driver first`
+     - `Boot from PCI-E/PCI Expansion Devices > UEFI driver first`
 
 ### 2. Install Proxmox
-- When selecting the target disk, choose **Options** and set `maxroot` to limit the root partition size.
+- Notices:
+  - On the first boot after Proxmox USB installer creation, GPT header corruption may occur.
+    - On Asus X299 mainboard: `Boot > Boot Configuration > Next Boot Recovery Action > Recovery`
+  - On AMD systems: If Promox installer fails to boot, try restarting the system a few times
+  - On Intel systems with NVIDIA RTX GPUs: Uf Promox installer fails to boot, try using older Proxmox 9.1 instead
+- When selecting the target disk, choose **Options** and set **maxroot** to `20GB` to limit the root partition size
+- Set Hostname to `vsw#.local` and configure network information
 
 ### 3. Access GUI Control Panel from Another PC
-- **Username:** `root`
+- **Username:** root
 - **Password:** Set during installation
 
 ### 4. Change APT Repositories
-1. Navigate to:
-   - `Datacenter > Node > Updates > Repositories`
-2. Disable:
+- Navigate to: `Datacenter > Node > Updates > Repositories`
+- Disable:
    - enterprise repo
    - pve-enterprise repo
-3. Add:
+- Add:
    - **No-Subscription**
    - **Ceph Squid No-Subscription**
-4. Open Shell:
-   - `Datacenter > Node > Shell`
-5. Update packages:
-   ```bash
-   apt update
-   apt upgrade
-   ```
+- Open Shell: `Datacenter > Node > Shell`
+- Update packages:
+
+```bash
+apt update
+apt upgrade
+```
 
 ---
 
 ## II. Install VM
-
 ### 1. Add Ubuntu ISO
-Navigate to:
-
-`Datacenter > Node > local > ISO Images`
-
+- Navigate to `Datacenter > Node > local > ISO Images`
 - Upload from PC, or
 - Download from URL
 
 ### 2. Create VM
-
-#### General
+#### a) General
 - **VMID:** e.g., 801, 802, etc., on vsw8 node
 - **Name:** e.g., vm1, vm2, etc.
 
-#### OS
+#### b) OS
 - **ISO image:** For OS installation
 - Switch to **Do not use any media** after finishing installation
 
-#### System
+#### d) System
 - **Graphic card**: Default if using virtual display, none if using GPU Passthrough and physical display
 - **Machine:** q35
 - **BIOS:** OVMF
+  - Temporarily solution in case **CSM** cannot be disabled in BIOS: Set this to SeaBIOS
 - **EFI Storage:** Select local-vlm storage option
 - **SCSI Controller:** VirtIO SCSI single
 - **Qemu Agent:** Enable for better Proxmox integration
 
-#### Disk
+#### e) Disk
 - **Bus:** SCSI (recommended)
 - **Disk size (GiB)**
 - **Discard:** Enable if using SSD
 
-#### CPU
+#### f) CPU
 - **Cores:** Number of threads
 - **Type:** host
 
-#### Memory
+#### g) Memory
 <!--- - **Memory (MiB):** Reserve 4-8 (GiB) for the host, then allocate the remaining memory to the virtual machines (MiB = GiB * 1024) -->
 - **Memory (MiB):** Reserve 10% for the host, then allocate the remaining memory to the virtual machines (MiB = GiB * 1024)
 - **Advanced > Balloning Device:** Disable as it doesn't work with PCI Passthrough
 
 ### 3. Setup GPU Passthrough
-Navigate to:
-
-`Datacenter > Node > VM > Hardware > Add > PCI Device`
-
-Settings:
-- **Raw Device**
-- **Device:** Select NVIDIA GPU
-- **All Functions:** Enable
-- **Advanced > PCI-Express:** Enable
+- Navigate to: `Datacenter > Node > VM > Hardware > Add > PCI Device`
+- Settings:
+  - **Raw Device**
+  - **Device:** Select NVIDIA GPU
+  - **All Functions:** Enable
+  - **Advanced > PCI-Express:** Enable
 
 ### 4. Setup Storage Passthrough
-
-Open:
-
-`Datacenter > Node > Shell`
-
-Find disk ID:
+- Open: `Datacenter > Node > Shell`
+- Find disk ID:
 
 ```bash
 lshw -class disk -class storage
 ```
 
-Hot-Plug/Add physical device as new virtual SCSI disk:
+- Hot-Plug/Add physical device as new virtual SCSI disk:
 
 ```bash
 qm set {VMID} -scsi{number} /dev/disk/by-id/ata-vendor_disk_id
 ```
 
-Hot-Unplug/Remove virtual disk:
+- Hot-Unplug/Remove virtual disk:
 
 ```bash
 qm unlink {VMID} --idlist scsi{number}
 ```
 
-Partition passthrough:
+- Partition passthrough:
 
 ```bash
 /dev/disk/by-id/ata-vendor_disk_id_part_number
@@ -124,28 +127,20 @@ Partition passthrough:
 
 ### 5. Install OS on VM
 
-1. Click **Start**
-2. Open **>_ Console**: show VM display
+- Click **Start**
+- Open **>_ Console**: Show VM display
 
 ---
 
 ## III. Setup Cluster
 
 ### 1. First Node
-
-Navigate to:
-
-`Datacenter > Cluster > Create Cluster`
-
+- Navigate to: `Datacenter > Cluster > Create Cluster`
 - Set **Cluster Name**
 - Copy **Join Information**
 
 ### 2. Other Nodes
-
-Navigate to:
-
-`Datacenter > Cluster > Join Cluster`
-
+- Navigate to: `Datacenter > Cluster > Join Cluster`
 - Paste Join **Information**
 - Enter Master Node **Password**
 
@@ -154,37 +149,30 @@ Navigate to:
 ## IV. Remove Node from Cluster
 
 ### 1. Remove a Node on Remaining Node(s)
+- Temporarily disconnect the node being removed.
+- Open: `Datacenter > (Any Remaining) Node > Shell`
+- For a 2-node cluster, need to lower the required quorum count to allow configuration edits:
 
-1. Temporarily disconnect the node being removed.
-2. Open:
+```bash
+pvecm expected 1
+```
 
-   `Datacenter > (Any Remaining) Node > Shell`
+- Remove the node:
 
-3. For a 2-node cluster, need to lower the required quorum count to allow configuration edits:
+```bash
+pvecm delnode <removed_node>
+```
 
-   ```bash
-   pvecm expected 1
-   ```
+- Remove leftover node configuration:
 
-4. Remove the node:
-
-   ```bash
-   pvecm delnode <removed_node>
-   ```
-
-5. Remove leftover node configuration:
-
-   ```bash
-   rm -rf /etc/pve/nodes/<removed_node>
-   ```
+```bash
+rm -rf /etc/pve/nodes/<removed_node>
+```
 
 ### 2. Remove Cluster Configuration on Removed Node
 
-Open:
-
-`Datacenter > (Removed) Node > Shell`
-
-Remove cluster configuration by running:
+- Open: `Datacenter > (Removed) Node > Shell`
+- Remove cluster configuration by running:
 
 ```bash
 systemctl stop pve-cluster corosync
@@ -195,7 +183,7 @@ killall pmxcfs
 systemctl start pve-cluster
 ```
 
-Remove leftover node configuration:
+- Remove leftover node configuration:
 
 ```bash
 rm -rf /etc/pve/nodes/<remaining_nodes>
@@ -204,6 +192,7 @@ rm -rf /etc/pve/nodes/<remaining_nodes>
 ## V. Others
 
 ### 1. Check Device ID of GPU being used for Proxmox's CLI
+
 ```bash
 ls -l /sys/class/graphics/fb0/device
 ```
