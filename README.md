@@ -14,8 +14,8 @@
      - All GPUs must support UEFI
      - Bad HDMI / DisplayPort cables may result in no display output
    - On Asus X299 mainboard: `Boot > CSM > Launch CSM > Disabled`
-   - Temporarily solution in case disabling **CSM** causes black screen (example on Asus X299 mainboard):
-     - `Boot > CSM`
+   - On Asus X299 mainboard with **4 or more** GPUs with high VRAM, disabling **CSM** may cause system unable to boot. Temporary solution:
+     - Navigate to `Boot > CSM`
      - `Launch CSM > Enabled`
      - `Boot Device Control > UEFI and Legacy OPROM`
      - `Boot from Network Devices > UEFI driver first`
@@ -191,7 +191,16 @@ rm -rf /etc/pve/nodes/<remaining_nodes>
 
 ## V. Others
 
-### 1. Check Device ID of GPU being used for Proxmox's CLI
+### 1. Change Node IP Address
+
+- Navigate to: `Datacenter > Node > System > Network`, edit **vmbr0**
+  - **IPv4/CIDR**
+  - **Gateway**
+  - **Bridge ports**
+- Navigate to: `Datacenter > Node > System > Hosts`, change IP address in the second line and save
+- If node is in a cluster, change IP address in `/etc/pve/corosync.conf` on one node and reboot both nodes (NEED TESTING)
+
+### 2. Check Device ID of GPU being used for Proxmox's CLI
 
 ```bash
 ls -l /sys/class/graphics/fb0/device
