@@ -72,8 +72,9 @@ apt upgrade
 - **Graphic card**: Default if using virtual display, none if using GPU Passthrough and physical display
 - **Machine:** q35
 - **BIOS:** OVMF
+  - This must match the node's BIOS setting (CSM disabled = UEFI enforced &rarr; OVMF).
   - Temporarily solution in case **CSM** cannot be disabled in BIOS: Set this to SeaBIOS
-- **EFI Storage:** Select local-vlm storage option
+- **EFI Storage:** Select local-vlm storage option. Only available when BIOS is set to OVMF.
 - **SCSI Controller:** VirtIO SCSI single
 - **Qemu Agent:** Enable for better Proxmox integration
 
