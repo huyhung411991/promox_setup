@@ -72,7 +72,7 @@ apt upgrade
 - **Graphic card**: Default if using virtual display, none if using GPU Passthrough and physical display
 - **Machine:** q35
 - **BIOS:** OVMF
-  - This must match the node's BIOS setting (CSM disabled = UEFI enforced &rarr; OVMF).
+  - (Need verification) This must match the node's BIOS setting (CSM disabled = UEFI enforced &rarr; OVMF).
   - Temporarily solution in case **CSM** cannot be disabled in BIOS: Set this to SeaBIOS
 - **EFI Storage:** Select local-vlm storage option. Only available when BIOS is set to OVMF.
 - **SCSI Controller:** VirtIO SCSI single
@@ -201,7 +201,44 @@ rm -rf /etc/pve/nodes/<remaining_nodes>
 - Navigate to: `Datacenter > Node > System > Hosts`, change IP address in the second line and save
 - If node is in a cluster, change IP address in `/etc/pve/corosync.conf` on one node and reboot both nodes (NEED TESTING)
 
-### 2. Check Device ID of GPU being used for Proxmox's CLI
+### 2. Downgrade Proxmox Kernel
+#### a) Install older kernel via APT:
+- If only the latest kernel is installed, install the desired older version:
+```bash
+apt install pve-kernel-<target-version>-pve-signed
+```
+
+#### b) Reboot to the older kernel
+Choose one of the following:
+- Temporary selection with GRUB: select the target kernel from `GRUB menu > Advanced option`
+
+- Permanent selection on UEFI systems: Pin the target kernel:
+```bash
+proxmox-boot-tool kernel pin <target-version>-pve
+```
+
+- Permanent selection with GRUB: Set `GRUB_DEFAULT` in `/etc/default/grub` to the target kernel index path (e.g., `GRUB_DEFAULT='1>2'`) and run `update-grub`
+
+After rebooting, confirm the current kernel using:
+```bash
+uname -r
+```
+
+#### c) (Optional) Remove the newer kernel
+- Verify that the installed `proxmox-kernel-x.y` package matches the target version `x.y.z-t`
+
+- If not, install the required version:
+```bash
+apt install --allow-downgrades proxmox-kernel-<x.y>=<target-version>
+```
+
+- Remove newer kernel:
+```bash
+apt purge prox-kernel-<newer-version>
+```
+
+
+### 3. Check Device ID of GPU being used for Proxmox's CLI
 
 ```bash
 ls -l /sys/class/graphics/fb0/device
