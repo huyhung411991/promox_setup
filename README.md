@@ -194,11 +194,16 @@ rm -rf /etc/pve/nodes/<remaining_nodes>
 
 ### 1. Change Node IP Address
 
+- Check current IPs & MAC Address:
+```bash
+ifconfig
+```
 - Navigate to: `Datacenter > Node > System > Network`, edit **vmbr0**
   - **IPv4/CIDR**
   - **Gateway**
   - **Bridge ports**
 - Navigate to: `Datacenter > Node > System > Hosts`, change IP address in the second line and save
+- Return to `Datacenter > Node > System > Network`, click **Apply Configuration**
 - If node is in a cluster, change IP address in `/etc/pve/corosync.conf` on one node and reboot both nodes (NEED TESTING)
 
 ### 2. Downgrade Proxmox Kernel
